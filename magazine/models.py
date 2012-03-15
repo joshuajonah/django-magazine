@@ -1,14 +1,17 @@
 import calendar
 import re
 from datetime import date, datetime
+
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import F, Count
-from django.utils.text import truncate_words
 from django.template.defaultfilters import striptags
+from django.utils.text import truncate_words
+
 from sorl.thumbnail import ImageField, get_thumbnail
 from magazine.utils.word_cleaner import clean_word_text
+
 
 EMBARGO_TIME_IN_MONTHS = int(getattr(settings, 'MAGAZINE_EMBARGO_TIME_IN_MONTHS', 2))
 
@@ -115,6 +118,7 @@ class Issue(models.Model):
             return True
 
         f = getattr(settings, 'MAGAZINE_IS_EMBARGOED_FUNCTION', embargoed_by_date)
+        print f(self)
 
         return f(self)
 
@@ -202,57 +206,3 @@ class Article(models.Model):
     class Meta:
         ordering = ('-issue', 'order_in_issue',)
 
-class BookReviewManager(models.Manager):
-    def get_query_set(self):
-        return super(BookReviewManager, self).get_query_set().select_related(u'issue',)
-
-class BookReview(models.Model):
-    title = models.CharField(max_length = 250)
-    authors = models.ManyToManyField(Author)
-    issue = models.ForeignKey(Issue)
-    order_in_issue = models.PositiveIntegerField(default = 0)
-    book_author = models.CharField(blank = True, null = True, max_length = 60)
-    publisher = models.CharField(blank = True, null = True, max_length = 60)
-    publisher_location = models.CharField(blank = True, null = True, max_length = 60)
-    publication_date = models.CharField(max_length = 20, blank = True, null = True)
-    num_pages = models.PositiveIntegerField(blank = True, null = True)
-    price = models.CharField(blank = True, null = True, max_length = 250)
-    isbn = models.CharField(blank = True, null = True, max_length = 20, verbose_name = u'ISBN')
-    text = models.TextField(blank = True, null = True, help_text = u'Full text of the review.')
-    cleaned_text = models.TextField(blank = True, null = True, help_text = u'Auto-populated from the main body text, and cleaned up.')
-    hits = models.IntegerField(default = 0)
-    updated = models.DateTimeField(auto_now = True, default = datetime.now(), verbose_name = u'Last Updated')
-
-    objects = BookReviewManager()
-
-    def __unicode__(self):
-        if self.book_author:
-            return u'{0} ({1})'.format(self.title, self.book_author)
-
-        return self.title
-
-    def mark_visited(self):
-        BookReview.objects.filter(pk = self.pk).update(hits=F('hits') + 1)
-
-    def all_authors(self):
-        return self.authors.all()
-
-    def save(self, *args, **kwargs):
-        if self.text:
-            self.cleaned_text = clean_word_text(self.text)
-        return super(BookReview, self).save(*args, **kwargs)
-
-    def teaser(self):
-        if self.cleaned_text:
-            return truncate_words(striptags(self.cleaned_text), 50)
-
-        return u'None available.'
-
-    def demoted_text(self):
-        return heading_pattern.sub(increment_heading_tag, self.cleaned_text)
-
-    def get_absolute_url(self):
-        return reverse('magazine_bookreview_detail', args=[self.issue.number,self.pk,])
-
-    class Meta:
-        ordering = ('-issue', 'order_in_issue',)

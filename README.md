@@ -1,5 +1,7 @@
 # django-magazine
 
+Just like [Dominic Rodger's version](https://github.com/dominicrodger/django-magazine) only without all the irrelevant "book review" parts. This is my effort to make it more generic.
+
 A stub semi-pluggable Django app for managing a simple magazine.
 
 Magazines consist of Issues, each of which contains one or more Articles, which

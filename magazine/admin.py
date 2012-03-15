@@ -1,7 +1,12 @@
+from django.conf import settings
 from django.contrib import admin
-from magazine.models import Author, Article, Issue, BookReview
+
 from tinymce.widgets import TinyMCE
 from sorl.thumbnail.admin import AdminImageMixin
+from magazine.models import Author, Article, Issue
+
+
+MAGAZINE_EDITOR = getattr(settings, 'MAGAZINE_EDITOR', None)
 
 class AuthorAdmin(admin.ModelAdmin):
     list_display = ('surname_forename', 'get_num_articles', 'indexable',)
@@ -19,6 +24,7 @@ class AuthorAdmin(admin.ModelAdmin):
 
 admin.site.register(Author, AuthorAdmin)
 
+
 class ArticleAdmin(AdminImageMixin, admin.ModelAdmin):
     list_display = ('title', 'admin_thumbnail', 'hits', 'issue', 'updated',)
     search_fields = ('title', 'subheading', 'description', 'text',)
@@ -35,23 +41,9 @@ class ArticleAdmin(AdminImageMixin, admin.ModelAdmin):
 
 admin.site.register(Article, ArticleAdmin)
 
+
 class IssueAdmin(admin.ModelAdmin):
     list_display = ('number', 'month_year', 'published',)
     list_filter = ('published',)
+
 admin.site.register(Issue, IssueAdmin)
-
-class BookReviewAdmin(admin.ModelAdmin):
-    list_display = ('title', 'hits', 'issue', 'book_author', 'updated',)
-    search_fields = ('title', 'book_author', 'text',)
-    readonly_fields = ('hits',)
-    filter_horizontal = ('authors',)
-    exclude = ('cleaned_text',)
-
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        if db_field.name in ('text',):
-            return db_field.formfield(widget=TinyMCE(
-                attrs={'cols': 80, 'rows': 30},
-            ))
-        return super(BookReviewAdmin, self).formfield_for_dbfield(db_field, **kwargs)
-
-admin.site.register(BookReview, BookReviewAdmin)
